@@ -201,13 +201,20 @@ The user wants to work through these tasks one at a time, starting with the firs
 - [x] ✅ Test error handling during auto-calculation
 - [x] ✅ **User confirmed working**
 
-### Future Tasks
+### Completed Tasks (cont.)
 
-- [ ] Task 2: Implement localStorage cache for form data
+#### Task 2 - localStorage Cache ✅
+- [x] Initial analysis complete (from planning phase)
+- [x] ✅ Implement localStorage save/load functions
+- [x] ✅ Add debounced save on input changes (500ms)
+- [x] ✅ Load saved data on page load
+- [x] ✅ Handle edge cases (localStorage unavailable, quota exceeded)
+- [x] ✅ Add comprehensive debug logging
+- [x] ✅ **User manually tested - all features working successfully**
 
 ## Current Status / Progress Tracking
 
-**Current Phase:** Ready for Task 2 Planning/Execution
+**Current Phase:** All Tasks Complete - Ready for Final Commit
 
 **Completed:**
 - Created scratchpad.md structure
@@ -216,21 +223,96 @@ The user wants to work through these tasks one at a time, starting with the firs
 - Researched current info button implementation
 - Analyzed best practices for all three tasks
 - Created detailed implementation plans with success criteria
-- ✅ **Task 1 Complete**: Implemented and user-approved CSS hover delay (200ms)
-- ✅ **Task 3 Complete**: Implemented and user-approved debounced auto-calculation (400ms)
-- ✅ Added debug logging for troubleshooting
-- ✅ User confirmed both features working
+- ✅ **Task 1 Complete**: Info button hover delay (200ms) - User tested & approved
+- ✅ **Task 3 Complete**: Debounced auto-calculation (400ms) - User tested & approved
+- ✅ **Task 2 Complete**: localStorage cache for form persistence - User tested & approved
+- ✅ Additional validations: commission rate warning, buy price validation
+- ✅ Added comprehensive debug logging throughout
+- ✅ Committed and pushed Tasks 1 & 3 to GitHub
+- ✅ **User manually tested all features - working successfully**
 
 **In Progress:**
-- Awaiting user decision on Task 2 (localStorage cache)
+- Preparing final commit for Task 2
 
 **Next Steps:**
-- User confirms whether to proceed with Task 2
-- If yes: Plan and implement localStorage for form data persistence
-- Remove debug logging from Task 3 (optional, can keep for debugging)
-- Final review and completion
+- Update doc/TODO to mark Task 2 as complete
+- Commit and push Task 2 to GitHub
+- Project complete!
 
 ## Executor's Feedback or Assistance Requests
+
+### Task 2 Implementation Summary
+
+**File Modified:** `index.html` (lines 219-464)
+
+**Changes Made:**
+
+1. **Added storage key constant** (line 221)
+   - `STORAGE_KEY = 'stockCalc_formData'`
+   - Prefixed to avoid conflicts with other localStorage data
+
+2. **Created `saveFormData()` function** (lines 224-242)
+   - Collects all 8 form field values into object
+   - Serializes to JSON and saves to localStorage
+   - Wrapped in try-catch for error handling
+   - Logs success/failure to console
+
+3. **Created `loadFormData()` function** (lines 244-269)
+   - Retrieves saved data from localStorage
+   - Parses JSON and restores to form fields
+   - Only sets values if data exists (preserves defaults)
+   - Wrapped in try-catch for error handling
+   - Logs success/failure to console
+
+4. **Created `debouncedSaveFormData()` function** (lines 271-280)
+   - 500ms debounce timer (separate from calculation debounce)
+   - Prevents excessive localStorage writes during typing
+   - Clears previous timer on new input
+
+5. **Modified input event listeners** (lines 455-458)
+   - Now triggers both auto-calculation AND auto-save
+   - Both are debounced independently (400ms calc, 500ms save)
+
+6. **Added page load handler** (lines 463-464)
+   - Calls `loadFormData()` when page loads
+   - Restores previously saved form values automatically
+
+**Fields Saved to localStorage:**
+- ticker (股票代码)
+- stampTaxRate (印花税费率)
+- buyPrice (买入成交价格)
+- lots (买入/卖出成交数量)
+- targetProfit (目标净利润)
+- sellPriceInput (卖出成交价)
+- commissionRate (佣金费率)
+- minCommission (最低佣金)
+
+**Expected Behavior:**
+- ✅ User enters data → automatically saved 500ms after typing stops
+- ✅ User refreshes page → all form data restored
+- ✅ User closes browser and reopens → data still persists
+- ✅ If localStorage unavailable → gracefully fails (console warning only)
+- ✅ If localStorage quota exceeded → gracefully fails (console warning only)
+
+**Testing Instructions for User:**
+1. Open `index.html` in browser
+2. Open Chrome DevTools Console (F12)
+3. Enter some data in form fields (e.g., stock code, buy price)
+4. Wait 500ms and check console - should see "[DEBUG] Form data saved to localStorage"
+5. Refresh the page (F5)
+6. Check console - should see "[DEBUG] Form data restored from localStorage"
+7. Verify all your entered data is still there
+8. Close browser completely and reopen - data should still persist
+
+**Edge Cases Handled:**
+- localStorage not available (private browsing) → console warning, app continues
+- localStorage quota exceeded → console warning, app continues
+- Corrupted JSON data → console warning, uses default values
+- Missing fields in saved data → uses default values for missing fields
+
+**Ready for user manual testing and approval.**
+
+---
 
 ### Task 3 Implementation Summary
 

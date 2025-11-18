@@ -217,6 +217,67 @@
     };
 
     let debounceTimer = null;
+    let saveDebounceTimer = null;
+    const STORAGE_KEY = 'stockCalc_formData';
+
+    // localStorage functions
+    const saveFormData = () => {
+      console.log('[DEBUG] saveFormData() called');
+      try {
+        const formData = {
+          ticker: form.ticker.value,
+          stampTaxRate: form.stampTaxRate.value,
+          buyPrice: form.buyPrice.value,
+          lots: form.lots.value,
+          targetProfit: form.targetProfit.value,
+          sellPriceInput: form.sellPriceInput.value,
+          commissionRate: form.commissionRate.value,
+          minCommission: form.minCommission.value
+        };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(formData));
+        console.log('[DEBUG] Form data saved to localStorage:', formData);
+      } catch (error) {
+        console.warn('[DEBUG] Failed to save to localStorage:', error);
+      }
+    };
+
+    const loadFormData = () => {
+      console.log('[DEBUG] loadFormData() called');
+      try {
+        const savedData = localStorage.getItem(STORAGE_KEY);
+        if (savedData) {
+          const formData = JSON.parse(savedData);
+          console.log('[DEBUG] Loading saved data:', formData);
+
+          // Restore form values
+          if (formData.ticker) form.ticker.value = formData.ticker;
+          if (formData.stampTaxRate) form.stampTaxRate.value = formData.stampTaxRate;
+          if (formData.buyPrice) form.buyPrice.value = formData.buyPrice;
+          if (formData.lots) form.lots.value = formData.lots;
+          if (formData.targetProfit) form.targetProfit.value = formData.targetProfit;
+          if (formData.sellPriceInput) form.sellPriceInput.value = formData.sellPriceInput;
+          if (formData.commissionRate) form.commissionRate.value = formData.commissionRate;
+          if (formData.minCommission) form.minCommission.value = formData.minCommission;
+
+          console.log('[DEBUG] Form data restored from localStorage');
+        } else {
+          console.log('[DEBUG] No saved data found in localStorage');
+        }
+      } catch (error) {
+        console.warn('[DEBUG] Failed to load from localStorage:', error);
+      }
+    };
+
+    const debouncedSaveFormData = () => {
+      console.log('[DEBUG] debouncedSaveFormData() called - setting 500ms timer');
+      if (saveDebounceTimer) {
+        clearTimeout(saveDebounceTimer);
+      }
+      saveDebounceTimer = setTimeout(() => {
+        console.log('[DEBUG] 500ms elapsed, saving form data');
+        saveFormData();
+      }, 500);
+    };
 
     const performCalculation = () => {
       console.log('[DEBUG] performCalculation() called');
@@ -391,9 +452,16 @@
     console.log('[DEBUG] Found', inputs.length, 'input elements');
     inputs.forEach((input, index) => {
       console.log('[DEBUG] Input', index + ':', input.name || input.id, 'type:', input.type);
-      input.addEventListener('input', triggerAutoCalculation);
+      input.addEventListener('input', () => {
+        triggerAutoCalculation();
+        debouncedSaveFormData();
+      });
     });
     console.log('[DEBUG] Input listeners setup complete');
+
+    // Load saved form data on page load
+    console.log('[DEBUG] Loading saved form data on page load...');
+    loadFormData();
 
     form.querySelectorAll('input[type="number"]').forEach((input) => {
       input.addEventListener('wheel', (event) => {
