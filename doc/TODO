@@ -1,0 +1,6 @@
+- [ ] Let the info button only hover out if our cursor is close enough to the info button. Currently, whenever I move near to it, it will show up.
+  This is really annoying.
+
+- [ ] use cache to store the temporary data. So even after the refresh, the data will be kept.
+
+- [ ] automatically calculate. Do not need to touch the calculate button. is This best practice?

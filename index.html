@@ -1,0 +1,359 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>股票佣金与目标收益计算</title>
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+  <main class="card">
+    <h1>股票佣金与目标收益计算</h1>
+    <p class="disclaimer">
+      使用本工具即代表您同意免责声明：仅供参考与学习，非投资建议，使用或误用造成的结果由您自行承担。
+    </p>
+    <form id="calc-form" class="form-grid">
+      <label>
+        <div class="label-header">
+          <span>股票代码 (SH/SZ)</span>
+          <button type="button" class="info-btn" data-tip="请输入以 SH 或 SZ 开头的股票代码，用于区分沪深市场并确定过户费。" aria-label="请输入以 SH 或 SZ 开头的股票代码，用于区分沪深市场并确定过户费。">i</button>
+        </div>
+        <input type="text" id="ticker" name="ticker" placeholder="SH600519" required />
+      </label>
+      <label>
+        <div class="label-header">
+          <span>印花税费率 (万分之)</span>
+          <button type="button" class="info-btn" data-tip="普通股票默认万分之五，仅卖出时收取；若为ETF通常免征印花税，可直接填 0。" aria-label="普通股票默认万分之五，仅卖出时收取；若为ETF通常免征印花税，可直接填 0。">i</button>
+        </div>
+        <input type="number" step="0.001" min="0" id="stampTaxRate" name="stampTaxRate" value="5" required />
+      </label>
+      <label>
+        <div class="label-header">
+          <span>买入成交价格 (元)</span>
+          <button type="button" class="info-btn" data-tip="单股买入价格，支持3位小数。" aria-label="单股买入价格，支持3位小数。">i</button>
+        </div>
+        <input type="number" step="0.001" min="0" id="buyPrice" name="buyPrice" required />
+      </label>
+      <label>
+        <div class="label-header">
+          <span>买入/卖出成交数量 (手)</span>
+          <button type="button" class="info-btn" data-tip="每手=100股，请输入手数。" aria-label="每手=100股，请输入手数。">i</button>
+        </div>
+        <input type="number" step="1" min="1" id="lots" name="lots" required />
+      </label>
+      <label>
+        <div class="label-header">
+          <span>目标净利润 (%)</span>
+          <button type="button" class="info-btn" data-tip="与卖出价两者至少填一项；填写本字段可自动推导卖出价，若二者皆填则以卖出价为准。" aria-label="与卖出价两者至少填一项；填写本字段可自动推导卖出价，若二者皆填则以卖出价为准。">i</button>
+        </div>
+        <input type="number" step="0.01" id="targetProfit" name="targetProfit" value="2" />
+      </label>
+      <label>
+        <div class="label-header">
+          <span>卖出成交价 (元，可选)</span>
+          <button type="button" class="info-btn" data-tip="支持3位小数；填写此项可不填目标净利润，若与目标净利润同时填写则仅使用卖出价。" aria-label="支持3位小数；填写此项可不填目标净利润，若与目标净利润同时填写则仅使用卖出价。">i</button>
+        </div>
+        <input type="number" step="0.001" min="0" id="sellPriceInput" name="sellPriceInput" placeholder="不填则自动计算" />
+      </label>
+      <label>
+        <div class="label-header">
+          <span>佣金费率 (万分之)</span>
+          <button type="button" class="info-btn" data-tip="佣金（券商收取）：KW 账户万分之 1.2，起点 5 元，买卖双向收取。" aria-label="佣金（券商收取）：KW 账户万分之 1.2，起点 5 元，买卖双向收取。">i</button>
+        </div>
+        <input type="number" step="0.001" min="0" id="commissionRate" name="commissionRate" value="1.2" required />
+      </label>
+      <label>
+        <div class="label-header">
+          <span>最低佣金 (元)</span>
+          <button type="button" class="info-btn" data-tip="券商对单笔交易收取的最低佣金金额。" aria-label="券商对单笔交易收取的最低佣金金额。">i</button>
+        </div>
+        <input type="number" step="0.01" min="0" id="minCommission" name="minCommission" value="5" required />
+      </label>
+      <button type="submit">开始计算</button>
+    </form>
+    <p class="error" id="error"></p>
+    <p class="warning" id="warning"></p>
+    <section id="results" class="results hidden">
+      <h2>计算结果</h2>
+      <div class="result-grid">
+        <div class="result-row">
+          <span>过户费费率 (万分之)</span>
+          <span id="transferRate">-</span>
+        </div>
+        <div class="result-row">
+          <span>买入成交金额</span>
+          <span id="buyAmount">-</span>
+        </div>
+        <div class="result-row">
+          <span>买入佣金</span>
+          <span id="buyCommission">-</span>
+        </div>
+        <div class="result-row">
+          <span>买入过户费</span>
+          <span id="buyTransfer">-</span>
+        </div>
+        <div class="result-row">
+          <span>买入总成本(发生金额)</span>
+          <span id="buyCost">-</span>
+        </div>
+        <div class="result-row">
+          <span>买入综合费率 (万分之)</span>
+          <span id="buyFeeRate" class="mid-highlight">-</span>
+        </div>
+        <div class="result-row">
+          <span>卖出综合费率 (万分之)</span>
+          <span id="sellFeeRate" class="mid-highlight">-</span>
+        </div>
+        <div class="result-row">
+          <span>卖出成交价</span>
+          <span id="sellPrice" class="highlight-value">-</span>
+        </div>
+        <div class="result-row">
+          <span>卖出成交金额</span>
+          <span id="sellAmount">-</span>
+        </div>
+        <div class="result-row">
+          <span>卖出佣金</span>
+          <span id="sellCommission">-</span>
+        </div>
+        <div class="result-row">
+          <span>卖出过户费</span>
+          <span id="sellTransfer">-</span>
+        </div>
+        <div class="result-row">
+          <span>卖出印花税</span>
+          <span id="sellStamp">-</span>
+        </div>
+        <div class="result-row">
+          <span>卖出费用合计</span>
+          <span id="sellFeeTotal">-</span>
+        </div>
+        <div class="result-row">
+          <span>卖出净回款(发生金额)</span>
+          <span id="expectedNet">-</span>
+        </div>
+        <div class="result-row">
+          <span>实际收益</span>
+          <span id="capitalGain" class="highlight-value">-</span>
+        </div>
+        <div class="result-row">
+          <span>收益率（实际收益/买入总成本）</span>
+          <span id="earningRate" class="highlight-value">-</span>
+        </div>
+      </div>
+    </section>
+    <p class="note" id="commissionNote"></p>
+    <details class="dev-note">
+      <summary>开发调试用校验数据（展开仅供开发核对）</summary>
+      <p>使用以下参数即可验证当前算法输出是否吻合既有结果：</p>
+      <pre>
+股票佣金与目标收益计算
+股票代码 (SH/SZ) : SH600519
+买入成交价格 (元) : 1457
+买入/卖出成交数量 (手) : 1
+目标净利润 (%) : 2
+卖出价 (元，可选) : 1466.9
+佣金费率 (万分之) : 1.2
+印花税费率 (万分之) : 5
+最低佣金 (元) : 5
+
+预期输出
+买入成交金额 : 145700.00 元
+买入佣金 : 17.480 元
+买入过户费 : 1.46 元
+买入总成本(发生金额) : 145718.94 元
+买入综合费率 (万分之) : 1.300 万分之
+过户费费率 (万分之) : 0.100 万分之
+卖出综合费率 (万分之) : 6.300 万分之
+卖出成交价 : 1466.90 元
+卖出成交金额 : 146690.00 元
+卖出佣金 : 17.600 元
+卖出过户费 : 1.47 元
+卖出印花税 : 73.350 元
+卖出费用合计 : 92.42 元
+卖出净回款(发生金额) : 146597.58 元
+实际收益 : 878.64 元
+收益率（实际收益/买入总成本）: 0.60%
+      </pre>
+    </details>
+  </main>
+  <script>
+    const form = document.getElementById('calc-form');
+    const errorEl = document.getElementById('error');
+    const warningEl = document.getElementById('warning');
+    const resultsEl = document.getElementById('results');
+    const commissionNoteEl = document.getElementById('commissionNote');
+
+    const outputEls = {
+      buyAmount: document.getElementById('buyAmount'),
+      buyCommission: document.getElementById('buyCommission'),
+      buyTransfer: document.getElementById('buyTransfer'),
+      buyCost: document.getElementById('buyCost'),
+      buyFeeRate: document.getElementById('buyFeeRate'),
+      transferRate: document.getElementById('transferRate'),
+      sellFeeRate: document.getElementById('sellFeeRate'),
+      sellPrice: document.getElementById('sellPrice'),
+      sellAmount: document.getElementById('sellAmount'),
+      sellCommission: document.getElementById('sellCommission'),
+      sellTransfer: document.getElementById('sellTransfer'),
+      sellStamp: document.getElementById('sellStamp'),
+      sellFeeTotal: document.getElementById('sellFeeTotal'),
+      expectedNet: document.getElementById('expectedNet'),
+      capitalGain: document.getElementById('capitalGain'),
+      earningRate: document.getElementById('earningRate')
+    };
+
+    const roundToCents = (value) => Math.round((value + Number.EPSILON) * 100) / 100;
+    const roundToPrice = (value) => Math.round((value + Number.EPSILON) * 1000) / 1000;
+    const formatCurrency = (value, fractionDigits = 2) => roundToCents(value).toFixed(fractionDigits);
+    const formatMaybeCurrency = (value, fractionDigits = 2) => value === null ? '--' : formatCurrency(value, fractionDigits) + ' 元';
+    const formatPrice = (value) => roundToPrice(value).toFixed(3) + ' 元';
+    const formatPercent = (value) => (value * 100).toFixed(2) + '%';
+    const formatWanRate = (value) => {
+      const wanValue = value * 10000;
+      return (Math.round((wanValue + Number.EPSILON) * 1000) / 1000).toFixed(3);
+    };
+
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      errorEl.textContent = '';
+      warningEl.textContent = '';
+      commissionNoteEl.textContent = '';
+
+      const ticker = form.ticker.value.trim().toUpperCase();
+      const buyPrice = Number(form.buyPrice.value);
+      const lots = Number(form.lots.value);
+      const targetProfitRaw = form.targetProfit.value.trim();
+      const hasTargetProfit = targetProfitRaw !== '';
+      const targetProfitPercent = hasTargetProfit ? Number(targetProfitRaw) : null;
+      const sellPriceRaw = form.sellPriceInput.value.trim();
+      const commissionRateWan = Number(form.commissionRate.value);
+      const stampTaxRateWan = Number(form.stampTaxRate.value);
+      const minCommission = Number(form.minCommission.value);
+
+      if (!ticker.startsWith('SH') && !ticker.startsWith('SZ')) {
+        errorEl.textContent = '请输入以 SH 或 SZ 开头的股票代码';
+        resultsEl.classList.add('hidden');
+        return;
+      }
+
+      if ([buyPrice, lots, commissionRateWan, stampTaxRateWan, minCommission].some((value) => !isFinite(value) || value < 0)) {
+        errorEl.textContent = '请检查输入，所有数值需为非负数';
+        resultsEl.classList.add('hidden');
+        return;
+      }
+
+      if (hasTargetProfit && !isFinite(targetProfitPercent)) {
+        errorEl.textContent = '目标净利润需为数字';
+        resultsEl.classList.add('hidden');
+        return;
+      }
+
+      const hasManualSellPrice = sellPriceRaw !== '';
+      let manualSellPrice = null;
+      if (hasManualSellPrice) {
+        manualSellPrice = Number(sellPriceRaw);
+        if (!isFinite(manualSellPrice) || manualSellPrice <= 0) {
+          errorEl.textContent = '卖出价需为大于 0 的数字';
+          resultsEl.classList.add('hidden');
+          return;
+        }
+      }
+
+      if (!hasManualSellPrice && !hasTargetProfit) {
+        errorEl.textContent = '请至少填写目标净利润或卖出成交价';
+        resultsEl.classList.add('hidden');
+        return;
+      }
+
+      if (!Number.isInteger(lots) || lots === 0) {
+        errorEl.textContent = '手数需为正整数';
+        resultsEl.classList.add('hidden');
+        return;
+      }
+
+      const isShanghai = ticker.startsWith('SH');
+      const commissionRate = commissionRateWan / 10000;
+      const stampTaxRate = stampTaxRateWan / 10000;
+      const transferRate = isShanghai ? 0.00001 : 0;
+      if (hasTargetProfit && targetProfitPercent < 0) {
+        warningEl.textContent = '目标净利润为负，表示计划亏损卖出，请确认是否符合预期。';
+      }
+
+      const targetProfit = hasTargetProfit ? targetProfitPercent / 100 : null;
+      const shares = lots * 100;
+
+      const buyAmount = roundToCents(buyPrice * shares);
+      const buyCommissionRaw = buyAmount * commissionRate;
+      const buyCommission = roundToCents(Math.max(buyCommissionRaw, minCommission));
+      const buyTransfer = roundToCents(buyAmount * transferRate);
+      const buyCost = roundToCents(buyAmount + buyCommission + buyTransfer);
+      const buyFeeRate = (buyCost - buyAmount) / buyAmount;
+
+      const sellFeeRate = commissionRate + stampTaxRate + transferRate;
+      if (sellFeeRate >= 1) {
+        errorEl.textContent = '卖出综合费率需小于 1';
+        resultsEl.classList.add('hidden');
+        return;
+      }
+
+      let sellPrice;
+
+      if (hasManualSellPrice) {
+        sellPrice = roundToPrice(manualSellPrice);
+      } else {
+        const targetAmount = roundToCents(buyCost * (1 + targetProfit));
+        sellPrice = roundToPrice(targetAmount / (shares * (1 - sellFeeRate)));
+      }
+
+      const sellAmount = roundToCents(sellPrice * shares);
+      const sellCommissionRaw = sellAmount * commissionRate;
+      const sellCommission = roundToCents(Math.max(sellCommissionRaw, minCommission));
+      const sellTransfer = roundToCents(sellAmount * transferRate);
+      const sellStamp = roundToCents(sellAmount * stampTaxRate);
+      const sellFeeTotal = roundToCents(sellCommission + sellTransfer + sellStamp);
+      const expectedNet = roundToCents(sellAmount - sellFeeTotal);
+      const capitalGain = roundToCents(expectedNet - buyCost);
+      const sellFeeRateDisplay = sellAmount === 0 ? 0 : sellFeeTotal / sellAmount;
+      const earningRate = buyCost === 0 ? 0 : capitalGain / buyCost;
+      const commissionNotes = [];
+
+      if (buyCommissionRaw < minCommission) {
+        commissionNotes.push(`买入佣金按费率计算为 ${formatCurrency(buyCommissionRaw, 3)} 元，低于最低佣金 ${formatCurrency(minCommission)} 元，按最低佣金计费。`);
+      }
+
+      if (sellCommissionRaw < minCommission) {
+        commissionNotes.push(`卖出佣金按费率计算为 ${formatCurrency(sellCommissionRaw, 3)} 元，低于最低佣金 ${formatCurrency(minCommission)} 元，按最低佣金计费。`);
+      }
+
+      outputEls.buyAmount.textContent = formatCurrency(buyAmount) + ' 元';
+      outputEls.buyCommission.textContent = formatCurrency(buyCommission, 3) + ' 元';
+      outputEls.buyTransfer.textContent = formatCurrency(buyTransfer, 2) + ' 元';
+      outputEls.buyCost.textContent = formatCurrency(buyCost) + ' 元';
+      outputEls.buyFeeRate.textContent = formatWanRate(buyFeeRate) + ' 万分之';
+      outputEls.transferRate.textContent = formatWanRate(transferRate) + ' 万分之';
+      outputEls.sellFeeRate.textContent = formatWanRate(sellFeeRateDisplay) + ' 万分之';
+      outputEls.sellPrice.textContent = formatPrice(sellPrice);
+      outputEls.sellAmount.textContent = formatCurrency(sellAmount) + ' 元';
+      outputEls.sellCommission.textContent = formatCurrency(sellCommission, 3) + ' 元';
+      outputEls.sellTransfer.textContent = formatCurrency(sellTransfer, 2) + ' 元';
+      outputEls.sellStamp.textContent = formatCurrency(sellStamp, 3) + ' 元';
+      outputEls.sellFeeTotal.textContent = formatCurrency(sellFeeTotal) + ' 元';
+      outputEls.expectedNet.textContent = formatCurrency(expectedNet) + ' 元';
+      outputEls.capitalGain.textContent = formatCurrency(capitalGain) + ' 元';
+      outputEls.earningRate.textContent = formatPercent(earningRate);
+
+      resultsEl.classList.remove('hidden');
+      commissionNoteEl.textContent = commissionNotes.join(' ');
+    });
+
+    form.querySelectorAll('input[type="number"]').forEach((input) => {
+      input.addEventListener('wheel', (event) => {
+        if (document.activeElement === input) {
+          event.preventDefault();
+        }
+      }, { passive: false });
+    });
+  </script>
+</body>
+</html>
